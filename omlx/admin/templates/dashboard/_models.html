@@ -26,6 +26,14 @@
                             class="px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200">
                             {{ t('models.tab.quantizer') }}
                         </button>
+                        <button
+                            @click="setModelsTab('uploader')"
+                            :class="modelsTab === 'uploader'
+                                ? 'bg-neutral-900 text-white'
+                                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'"
+                            class="px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200">
+                            {{ t('models.tab.uploader') }}
+                        </button>
                     </div>
 
                     <!-- ==================== MANAGER TAB ==================== -->
@@ -1068,13 +1076,13 @@
                                         <label class="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1.5">{{ t('models.oq.level') }}</label>
                                         <select x-model.number="oqLevel"
                                                 class="w-full px-4 py-2.5 bg-white border border-neutral-300 rounded-xl text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all">
-                                            <option value="2" x-text="'oQ2' + (oqEnableClip ? '+' : '')">oQ2</option>
-                                            <option value="3" x-text="'oQ3' + (oqEnableClip ? '+' : '')">oQ3</option>
-                                            <option value="3.5" x-text="'oQ3.5' + (oqEnableClip ? '+' : '')">oQ3.5</option>
-                                            <option value="4" selected x-text="'oQ4' + (oqEnableClip ? '+' : '')">oQ4</option>
-                                            <option value="5" x-text="'oQ5' + (oqEnableClip ? '+' : '')">oQ5</option>
-                                            <option value="6" x-text="'oQ6' + (oqEnableClip ? '+' : '')">oQ6</option>
-                                            <option value="8" x-text="'oQ8' + (oqEnableClip ? '+' : '')">oQ8</option>
+                                            <option value="2" x-text="'oQ2' + (oqEnableClip ? 'e' : '')">oQ2</option>
+                                            <option value="3" x-text="'oQ3' + (oqEnableClip ? 'e' : '')">oQ3</option>
+                                            <option value="3.5" x-text="'oQ3.5' + (oqEnableClip ? 'e' : '')">oQ3.5</option>
+                                            <option value="4" selected x-text="'oQ4' + (oqEnableClip ? 'e' : '')">oQ4</option>
+                                            <option value="5" x-text="'oQ5' + (oqEnableClip ? 'e' : '')">oQ5</option>
+                                            <option value="6" x-text="'oQ6' + (oqEnableClip ? 'e' : '')">oQ6</option>
+                                            <option value="8" x-text="'oQ8' + (oqEnableClip ? 'e' : '')">oQ8</option>
                                         </select>
                                     </div>
                                     <!-- Start Button -->
@@ -1102,10 +1110,10 @@
                                         {{ t('models.oq.advanced_settings') }}
                                     </button>
                                     <div x-show="oqAdvancedOpen" x-cloak class="mt-3 space-y-3 pl-1">
-                                        <!-- Clip Optimization -->
+                                        <!-- Enhanced Quantization(+) -->
                                         <div class="flex items-center justify-between">
                                             <div class="flex items-center gap-2">
-                                                <span class="text-sm text-neutral-600">{{ t('models.oq.clip_optimization') }}</span>
+                                                <span class="text-sm text-neutral-600">Enhanced Quantization(+)</span>
                                                 <span x-show="!oqSelectedModelSupportsClip()" x-cloak
                                                       class="text-[10px] text-neutral-400">(not available for this model)</span>
                                             </div>
@@ -1119,10 +1127,10 @@
                                             </button>
                                         </div>
                                         <p x-show="oqEnableClip" x-cloak class="text-xs text-amber-600 leading-relaxed">
-                                            {{ t('models.oq.clip_description') }}
+                                            Uses oQ's MoE-optimized <a href="https://arxiv.org/abs/2210.17323" target="_blank" class="underline">GPTQ(arXiv)</a> with batched expert processing and sensitivity-aware bit allocation. Requires full model load.
                                         </p>
                                         <p class="text-[11px] text-neutral-400 leading-relaxed">
-                                            Supported: Qwen3.5 MoE, Qwen3.5, MiniMax M2, GLM MoE, Ministral3.
+                                            Supported: Qwen3.5 MoE, Qwen3.5, MiniMax M2, GLM MoE, Nemotron, Step-3.5.
                                         </p>
                                         <!-- Text Only (VLM only) -->
                                         <div x-show="oqSelectedModelIsVLM()" x-cloak class="flex items-center justify-between">
@@ -1138,16 +1146,6 @@
                                         <p x-show="oqTextOnly && oqSelectedModelIsVLM()" x-cloak class="text-xs text-amber-600 leading-relaxed">
                                             Excludes vision encoder weights. Output is a text-only model (~2-3% smaller).
                                         </p>
-                                        <!-- Group Size -->
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-sm text-neutral-600">{{ t('models.oq.group_size') }}</span>
-                                            <select x-model.number="oqGroupSize"
-                                                    class="px-3 py-1.5 bg-white border border-neutral-300 rounded-lg text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent">
-                                                <option value="32">32</option>
-                                                <option value="64" selected>64</option>
-                                                <option value="128">128</option>
-                                            </select>
-                                        </div>
                                         <!-- Calibration Dataset (clip ON only) -->
                                         <div x-show="oqEnableClip" x-cloak class="flex items-center justify-between">
                                             <span class="text-sm text-neutral-600">{{ t('models.oq.calib_dataset') }}</span>
@@ -1180,14 +1178,20 @@
                                                 <option value="1024">1024</option>
                                             </select>
                                         </div>
-                                        <!-- AWQ Grid Size (clip ON only) -->
-                                        <div x-show="oqEnableClip" x-cloak class="flex items-center justify-between">
-                                            <span class="text-sm text-neutral-600">AWQ Grid Size</span>
-                                            <select x-model.number="oqNGrid"
-                                                    class="px-3 py-1.5 bg-white border border-neutral-300 rounded-lg text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent">
-                                                <option value="10" selected>10 (fast)</option>
-                                                <option value="20">20 (recommended, slow)</option>
-                                            </select>
+                                        <!-- Expert GPTQ Batch (clip ON only) -->
+                                        <div x-show="oqEnableClip" x-cloak class="space-y-1">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-sm text-neutral-600">{{ t('models.oq.expert_batch_size') }}</span>
+                                                <select x-model.number="oqExpertBatchSize"
+                                                        class="px-3 py-1.5 bg-white border border-neutral-300 rounded-lg text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent">
+                                                    <option value="0">{{ t('models.oq.expert_batch_none') }}</option>
+                                                    <option value="32" selected>32 ({{ t('models.oq.expert_batch_default') }})</option>
+                                                    <option value="16">16 ({{ t('models.oq.expert_batch_slow') }})</option>
+                                                </select>
+                                            </div>
+                                            <p class="text-[11px] text-neutral-400 leading-relaxed">
+                                                {{ t('models.oq.expert_batch_desc') }}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -1411,6 +1415,260 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- ==================== UPLOADER TAB ==================== -->
+                    <div x-show="modelsTab === 'uploader'" x-cloak>
+                        <!-- Header -->
+                        <div class="mb-8">
+                            <h2 class="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-2" x-text="window.t('models.uploader.section_label')"></h2>
+                            <h3 class="text-2xl font-bold tracking-tight text-neutral-900" x-text="window.t('models.uploader.heading')"></h3>
+                            <p class="text-sm text-neutral-500 mt-2" x-text="window.t('models.uploader.description')"></p>
+                        </div>
+
+                        <!-- HF Credentials Card -->
+                        <div class="bg-white rounded-2xl border border-neutral-200 overflow-hidden mb-6 p-6">
+                            <h4 class="text-sm font-semibold text-neutral-900 mb-4 flex items-center gap-2">
+                                <i data-lucide="key" class="w-4 h-4 text-neutral-400"></i>
+                                <span x-text="window.t('models.uploader.hf_token_label')"></span>
+                            </h4>
+                            <div class="flex items-center gap-3">
+                                <div class="flex-1 relative">
+                                    <input type="password"
+                                           x-model="uploadHfToken"
+                                           @input="uploadTokenValidated = false; uploadHfUsername = ''; uploadHfOrgs = [];"
+                                           :placeholder="window.t('models.uploader.hf_token_placeholder')"
+                                           class="w-full px-4 py-2.5 text-sm rounded-lg border border-neutral-200
+                                                  focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400 outline-none
+                                                  transition-all bg-neutral-50">
+                                </div>
+                                <button @click="validateUploadToken()"
+                                        :disabled="!uploadHfToken || uploadTokenValidating"
+                                        class="px-5 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center gap-2
+                                               disabled:opacity-50 disabled:cursor-not-allowed"
+                                        :class="uploadTokenValidated
+                                            ? 'bg-green-50 text-green-700 border border-green-200'
+                                            : 'bg-neutral-900 text-white hover:bg-neutral-800'">
+                                    <template x-if="uploadTokenValidating">
+                                        <span class="inline-flex animate-spin"><i data-lucide="loader-2" class="w-4 h-4"></i></span>
+                                    </template>
+                                    <template x-if="!uploadTokenValidating && uploadTokenValidated">
+                                        <i data-lucide="check" class="w-4 h-4"></i>
+                                    </template>
+                                    <template x-if="!uploadTokenValidating && !uploadTokenValidated">
+                                        <i data-lucide="shield-check" class="w-4 h-4"></i>
+                                    </template>
+                                    <span x-text="uploadTokenValidating
+                                        ? window.t('models.uploader.validating')
+                                        : (uploadTokenValidated
+                                            ? window.t('models.uploader.validated').replace('{username}', uploadHfUsername)
+                                            : window.t('models.uploader.validate_button'))"></span>
+                                </button>
+                            </div>
+                            <!-- Namespace selector (shown after validation) -->
+                            <div x-show="uploadTokenValidated" x-cloak class="mt-4">
+                                <label class="text-xs font-medium text-neutral-500 mb-1.5 block" x-text="window.t('models.uploader.namespace_label')"></label>
+                                <select x-model="uploadHfNamespace"
+                                        class="w-full max-w-xs px-3 py-2 text-sm rounded-lg border border-neutral-200
+                                               focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400 outline-none
+                                               bg-neutral-50 transition-all">
+                                    <option :value="uploadHfUsername" x-text="uploadHfUsername + ' (personal)'"></option>
+                                    <template x-for="org in uploadHfOrgs" :key="org.name">
+                                        <option :value="org.name" x-text="org.name + ' (org)'"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <!-- Error message -->
+                            <div x-show="uploadError" x-cloak class="mt-3 px-3 py-2 text-xs text-red-700 bg-red-50 rounded-lg border border-red-100" x-text="uploadError"></div>
+                            <!-- Success message -->
+                            <div x-show="uploadSuccess" x-cloak class="mt-3 px-3 py-2 text-xs text-green-700 bg-green-50 rounded-lg border border-green-100" x-text="uploadSuccess"></div>
+                        </div>
+
+                        <!-- oQ Models List -->
+                        <div x-show="uploadTokenValidated" x-cloak>
+                            <div class="bg-white rounded-2xl border border-neutral-200 overflow-hidden mb-6">
+                                <div class="px-6 py-4 border-b border-neutral-100 flex items-center justify-between">
+                                    <h4 class="text-sm font-semibold text-neutral-900 flex items-center gap-2">
+                                        <i data-lucide="package" class="w-4 h-4 text-neutral-400"></i>
+                                        <span x-text="window.t('models.uploader.oq_models_label')"></span>
+                                        <span class="text-xs font-normal text-neutral-400" x-text="'(' + uploadOqModels.length + ')'"></span>
+                                    </h4>
+                                    <button @click="loadUploadOqModels()"
+                                            class="px-3 py-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-700
+                                                   hover:bg-neutral-100 rounded-lg transition-all flex items-center gap-1.5">
+                                        <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                                <!-- Empty state -->
+                                <div x-show="uploadOqModels.length === 0" class="px-6 py-12 text-center">
+                                    <i data-lucide="package-x" class="w-8 h-8 text-neutral-300 mx-auto mb-3"></i>
+                                    <p class="text-sm text-neutral-500" x-text="window.t('models.uploader.no_oq_models')"></p>
+                                </div>
+                                <!-- Model list -->
+                                <div x-show="uploadOqModels.length > 0">
+                                    <template x-for="model in uploadOqModels" :key="model.path">
+                                        <div class="px-6 py-3.5 border-b border-neutral-50 last:border-b-0 flex items-center justify-between
+                                                    hover:bg-neutral-50 transition-colors">
+                                            <div class="flex-1 min-w-0">
+                                                <div class="text-sm font-medium text-neutral-900 truncate" x-text="model.name"></div>
+                                                <div class="text-xs text-neutral-400 mt-0.5" x-text="model.size_formatted"></div>
+                                            </div>
+                                            <button @click="openUploadModal(model)"
+                                                    class="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100
+                                                           rounded-lg transition-all"
+                                                    :title="window.t('models.uploader.upload_button')">
+                                                <i data-lucide="cloud-upload" class="w-4 h-4"></i>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upload Queue -->
+                        <div x-show="uploadTasks.length > 0" x-cloak>
+                            <div class="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
+                                <div class="px-6 py-4 border-b border-neutral-100">
+                                    <h4 class="text-sm font-semibold text-neutral-900 flex items-center gap-2">
+                                        <i data-lucide="list" class="w-4 h-4 text-neutral-400"></i>
+                                        <span x-text="window.t('models.uploader.queue_section')"></span>
+                                    </h4>
+                                </div>
+                                <template x-for="task in uploadTasks" :key="task.task_id">
+                                    <div class="px-6 py-4 border-b border-neutral-50 last:border-b-0">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <div class="flex-1 min-w-0">
+                                                <div class="text-sm font-medium text-neutral-900 truncate" x-text="task.model_name"></div>
+                                                <div class="text-xs text-neutral-400 mt-0.5 flex items-center gap-2">
+                                                    <span x-text="task.repo_id"></span>
+                                                    <span x-show="task.total_size_formatted" x-text="'· ' + task.total_size_formatted"></span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2 ml-4">
+                                                <!-- Status badge -->
+                                                <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full uppercase tracking-wider"
+                                                      :class="{
+                                                          'bg-amber-50 text-amber-600': task.status === 'pending',
+                                                          'bg-blue-50 text-blue-600': task.status === 'uploading',
+                                                          'bg-green-50 text-green-600': task.status === 'completed',
+                                                          'bg-red-50 text-red-600': task.status === 'failed',
+                                                          'bg-neutral-100 text-neutral-500': task.status === 'cancelled',
+                                                      }"
+                                                      x-text="task.status"></span>
+                                                <!-- Elapsed time -->
+                                                <span x-show="task.started_at" class="text-[10px] text-neutral-400 font-mono"
+                                                      x-text="formatUploadElapsed(task)"></span>
+                                                <!-- Cancel button -->
+                                                <button x-show="task.status === 'pending' || task.status === 'uploading'"
+                                                        @click="cancelUploadTask(task.task_id)"
+                                                        class="p-1 text-neutral-400 hover:text-red-500 rounded transition-colors"
+                                                        :title="window.t('models.uploader.cancel_tooltip')">
+                                                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                                </button>
+                                                <!-- Remove button -->
+                                                <button x-show="task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled'"
+                                                        @click="removeUploadTask(task.task_id)"
+                                                        class="p-1 text-neutral-400 hover:text-neutral-600 rounded transition-colors"
+                                                        :title="window.t('models.uploader.remove_tooltip')">
+                                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <!-- Progress bar (for uploading) -->
+                                        <div x-show="task.status === 'uploading' || task.status === 'pending'" class="mt-2">
+                                            <div class="w-full bg-neutral-100 rounded-full h-1.5 overflow-hidden">
+                                                <div class="h-full rounded-full transition-all duration-500"
+                                                     :class="task.status === 'pending' ? 'bg-amber-400 animate-pulse' : 'bg-blue-500'"
+                                                     :style="'width: ' + (task.status === 'pending' ? 100 : Math.max(task.progress, 5)) + '%'"></div>
+                                            </div>
+                                        </div>
+                                        <!-- Error message -->
+                                        <div x-show="task.status === 'failed' && task.error" x-cloak
+                                             class="mt-2 text-xs text-red-600 truncate" x-text="task.error"></div>
+                                        <!-- Completed: HF repo link -->
+                                        <div x-show="task.status === 'completed' && task.repo_url" x-cloak class="mt-2">
+                                            <a :href="task.repo_url" target="_blank" rel="noopener noreferrer"
+                                               class="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors">
+                                                <i data-lucide="external-link" class="w-3 h-3"></i>
+                                                <span x-text="task.repo_url"></span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Upload Confirmation Modal -->
+                        <template x-if="uploadModalOpen">
+                            <div class="fixed inset-0 z-[100] flex items-center justify-center" @keydown.escape.window="uploadModalOpen = false">
+                                <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="uploadModalOpen = false"></div>
+                                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+                                    <!-- Modal header -->
+                                    <div class="px-6 py-4 border-b border-neutral-100">
+                                        <h3 class="text-base font-semibold text-neutral-900" x-text="window.t('models.uploader.modal_title')"></h3>
+                                    </div>
+                                    <!-- Modal body -->
+                                    <div class="px-6 py-5 space-y-4">
+                                        <!-- Model name (read-only) -->
+                                        <div>
+                                            <label class="text-xs font-medium text-neutral-500 mb-1.5 block">Model</label>
+                                            <div class="text-sm font-medium text-neutral-900" x-text="uploadModalModelName"></div>
+                                        </div>
+                                        <!-- Repo name -->
+                                        <div>
+                                            <label class="text-xs font-medium text-neutral-500 mb-1.5 block" x-text="window.t('models.uploader.modal_repo_label')"></label>
+                                            <input type="text" x-model="uploadModalRepoId"
+                                                   class="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200
+                                                          focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400 outline-none
+                                                          bg-neutral-50 transition-all">
+                                        </div>
+                                        <!-- README source -->
+                                        <div>
+                                            <label class="text-xs font-medium text-neutral-500 mb-1.5 block" x-text="window.t('models.uploader.modal_readme_label')"></label>
+                                            <select x-model="uploadReadmeSource"
+                                                    class="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200
+                                                           focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400 outline-none
+                                                           bg-neutral-50 transition-all">
+                                                <option value="" x-text="window.t('models.uploader.modal_readme_none')"></option>
+                                                <template x-for="m in uploadAllModels.filter(m => m.has_readme)" :key="m.path">
+                                                    <option :value="m.path" x-text="m.name"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                        <!-- Private toggle -->
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-xs font-medium text-neutral-500" x-text="window.t('models.uploader.modal_private_label')"></label>
+                                            <button @click="uploadPrivate = !uploadPrivate"
+                                                    class="relative w-10 h-5 rounded-full transition-colors duration-200"
+                                                    :class="uploadPrivate ? 'bg-neutral-900' : 'bg-neutral-200'">
+                                                <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200"
+                                                      :class="uploadPrivate ? 'translate-x-5' : ''"></span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <!-- Modal footer -->
+                                    <div class="px-6 py-4 border-t border-neutral-100 flex items-center justify-end gap-2 bg-neutral-50">
+                                        <button @click="uploadModalOpen = false"
+                                                class="px-4 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-100 rounded-lg transition-all">
+                                            <span x-text="window.t('models.uploader.modal_cancel')"></span>
+                                        </button>
+                                        <button @click="startUpload()"
+                                                :disabled="!uploadModalRepoId || uploadStarting"
+                                                class="px-5 py-2 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded-lg transition-all
+                                                       disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5">
+                                            <template x-if="uploadStarting">
+                                                <span class="inline-flex animate-spin"><i data-lucide="loader-2" class="w-3.5 h-3.5"></i></span>
+                                            </template>
+                                            <template x-if="!uploadStarting">
+                                                <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
+                                            </template>
+                                            <span x-text="window.t('models.uploader.modal_confirm')"></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
                 </div>
 
                 <!-- Model Detail Modal -->
@@ -1533,13 +1791,21 @@
                                                 class="px-4 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-100 rounded-lg transition-all">
                                             {{ t('models.detail.close') }}
                                         </button>
-                                        <button @click="downloadRecommended(hfModelDetail.repo_id); closeModelDetail();"
-                                                :disabled="hfDownloading"
-                                                class="px-5 py-2 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded-lg transition-all
-                                                       disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5">
-                                            <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                                            {{ t('models.downloader.download_button') }}
-                                        </button>
+                                        <template x-if="hfModelDetail.is_adapter">
+                                            <span class="px-4 py-2 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-1.5">
+                                                <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                                                {{ t('models.detail.lora_warning') }}
+                                            </span>
+                                        </template>
+                                        <template x-if="!hfModelDetail.is_adapter">
+                                            <button @click="downloadRecommended(hfModelDetail.repo_id); closeModelDetail();"
+                                                    :disabled="hfDownloading"
+                                                    class="px-5 py-2 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded-lg transition-all
+                                                           disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5">
+                                                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                                                {{ t('models.downloader.download_button') }}
+                                            </button>
+                                        </template>
                                     </div>
                                 </div>
                             </div>

@@ -966,6 +966,11 @@ class TestSchedulerBoundarySnapshots:
             scheduler._cleanup_finished({"req-cleanup-sync"})
             mock_mx.synchronize.assert_called()
             mock_mx.stream.assert_called()
+            # Metal buffer cache clear is now DEFERRED by _DEFERRED_CLEAR_DELAY
+            # generation steps to avoid IOKit completeMemory() race (#435).
+            # It should NOT be called immediately in _cleanup_finished.
+            mock_mx.clear_cache.assert_not_called()
+            assert scheduler._deferred_clear_steps == 0
 
     def test_prefill_boundary_snapshot_records_rotating_cache(
         self, mock_model, mock_tokenizer
@@ -1134,6 +1139,48 @@ class TestSchedulerRotatingBlockAlignment:
         scheduler._cleanup_finished({"req-remove-active"})
 
         scheduler.batch_generator.remove.assert_called_once_with([uid])
+
+    def test_cleanup_finished_defers_metal_buffer_cache_clear(
+        self, mock_model, mock_tokenizer
+    ):
+        """_cleanup_finished must defer Metal buffer cache clear (#435).
+
+        Immediate mx.clear_cache() after request completion races with
+        IOKit's asynchronous completeMemory() callbacks. Instead,
+        _cleanup_finished sets _deferred_clear_steps so the clear happens
+        after _DEFERRED_CLEAR_DELAY generation steps.
+        """
+        scheduler = Scheduler(model=mock_model, tokenizer=mock_tokenizer)
+
+        request = Request(
+            request_id="req-clear-cache",
+            prompt="hello",
+            sampling_params=SamplingParams(),
+        )
+        request.prompt_token_ids = [1, 2]
+        request.num_prompt_tokens = 2
+        request.output_token_ids = [3]
+
+        scheduler.running["req-clear-cache"] = request
+        scheduler.requests["req-clear-cache"] = request
+
+        with patch("omlx.scheduler.mx") as mock_mx:
+            scheduler._cleanup_finished({"req-clear-cache"})
+            # Should NOT clear immediately — deferred to avoid IOKit race
+            mock_mx.clear_cache.assert_not_called()
+            # Counter should be set for deferred clearing
+            assert scheduler._deferred_clear_steps == 0
+
+    def test_cleanup_finished_skips_clear_cache_when_no_finished(
+        self, mock_model, mock_tokenizer
+    ):
+        """_cleanup_finished must not schedule deferred clear when no requests finished."""
+        scheduler = Scheduler(model=mock_model, tokenizer=mock_tokenizer)
+
+        with patch("omlx.scheduler.mx") as mock_mx:
+            scheduler._cleanup_finished(set())
+            mock_mx.clear_cache.assert_not_called()
+            assert scheduler._deferred_clear_steps is None
 
 
 class TestExtractCacheStatesCacheList:

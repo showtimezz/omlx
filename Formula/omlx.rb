@@ -1,9 +1,11 @@
 class Omlx < Formula
   desc "LLM inference server optimized for Apple Silicon"
   homepage "https://github.com/jundot/omlx"
-  url "https://github.com/jundot/omlx/archive/refs/tags/v0.2.19.tar.gz"
-  sha256 "88a2ce3f3a03ac02b4ff5d5343ba17c4809d31bdb29eb07ba636ba9008b9fd15"
+  url "https://github.com/jundot/omlx/archive/refs/tags/v0.2.23.tar.gz"
+  sha256 "3ba27c442de35f24561423e5baa4060bcdf5bb2402c84d3eeb10ca97eb9ec91d"
   license "Apache-2.0"
+
+  head "https://github.com/jundot/omlx.git", branch: "main"
 
   depends_on "rust" => :build
   depends_on "python@3.11"
@@ -22,9 +24,6 @@ class Omlx < Formula
   def install
     # Create venv with pip so dependency resolution works properly
     system "python3.11", "-m", "venv", libexec
-
-    # Upgrade pip to ensure modern resolver (handles git deps, etc.)
-    system libexec/"bin/pip", "install", "--upgrade", "pip"
 
     # Build Rust-based packages from source with headerpad to prevent
     # Homebrew dylib ID fixup failure (Mach-O header too small for absolute paths)
